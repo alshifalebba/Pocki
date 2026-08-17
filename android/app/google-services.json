@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "14604513358",
+    "project_id": "pocki-58418",
+    "storage_bucket": "pocki-58418.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:14604513358:android:e25cc9708467a87c98531f",
+        "android_client_info": {
+          "package_name": "com.gundu.pocki"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCBJWCY0MjmA8KzUOstEb8YlbtAQO5Clbo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
