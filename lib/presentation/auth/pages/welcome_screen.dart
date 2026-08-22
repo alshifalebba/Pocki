@@ -14,15 +14,32 @@ class WelcomeScreen extends StatelessWidget {
             children: [
               const Spacer(),
               Container(
-                width: 140,
-                height: 140,
+                width: 148,
+                height: 148,
                 decoration: BoxDecoration(
-                  color: PockiColors.purpleTint,
                   shape: BoxShape.circle,
-                  border: Border.all(color: PockiColors.lavender, width: 3),
+                  gradient: LinearGradient(
+                    colors: [
+                      PockiColors.primaryPink.withValues(alpha: 0.18),
+                      PockiColors.secondaryPurple.withValues(alpha: 0.18),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  border: Border.all(
+                    color: PockiColors.lavender,
+                    width: 3,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: PockiColors.primaryPink.withValues(alpha: 0.15),
+                      blurRadius: 24,
+                      spreadRadius: 4,
+                    ),
+                  ],
                 ),
                 child: const Center(
-                  child: Text("👛✨", style: TextStyle(fontSize: 54)),
+                  child: Text("👛", style: TextStyle(fontSize: 60)),
                 ),
               ),
               const SizedBox(height: 32),
