@@ -125,10 +125,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         ),
                         child: const Column(
                           children: [
-                            Text("📝", style: TextStyle(fontSize: 32)),
+                            Text("🛼", style: TextStyle(fontSize: 32)),
                             SizedBox(height: 8),
                             Text(
-                              "Add Todo",
+                              "Add Next Up",
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: PockiColors.secondaryPurple,
@@ -189,7 +189,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             _buildNavItem(0, Icons.home_rounded, "Home"),
             _buildNavItem(1, Icons.account_balance_wallet_rounded, "Expenses"),
             const SizedBox(width: 48),
-            _buildNavItem(2, Icons.assignment_rounded, "Todos"),
+            _buildNavItem(2, Icons.skateboarding_rounded, "Next Up"),
             _buildNavItem(3, Icons.person_rounded, "Profile"),
           ],
         ),

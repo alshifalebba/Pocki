@@ -46,6 +46,7 @@ void main() async {
   final registerUseCase = RegisterUseCase(authRepository);
   final logoutUseCase = LogoutUseCase(authRepository);
   final getCurrentUserUseCase = GetCurrentUserUseCase(authRepository);
+  final getInitialUserUseCase = GetInitialUserUseCase(authRepository);
   final updateUserProfileUseCase = UpdateUserProfileUseCase(authRepository);
 
   final getExpensesStreamUseCase = GetExpensesStreamUseCase(expenseRepository);
@@ -71,6 +72,7 @@ void main() async {
             registerUseCase: registerUseCase,
             logoutUseCase: logoutUseCase,
             getCurrentUserUseCase: getCurrentUserUseCase,
+            getInitialUserUseCase: getInitialUserUseCase,
           )..add(AuthCheckRequestedEvent()),
         ),
         BlocProvider<ExpenseBloc>(
@@ -117,6 +119,9 @@ class PockiApp extends StatelessWidget {
           if (state is AuthenticatedState) {
             return const MainNavigationScreen(initialIndex: 0);
           }
+          if (state is AuthLoadingState || state is AuthInitialState) {
+            return const SplashScreen();
+          }
           return const WelcomeScreen();
         },
       ),
@@ -141,6 +146,7 @@ class PockiApp extends StatelessWidget {
               builder: (_) => const MainNavigationScreen(initialIndex: 1),
             );
           case '/todos':
+          case '/nextup':
             return MaterialPageRoute(
               builder: (_) => const MainNavigationScreen(initialIndex: 2),
             );

@@ -159,7 +159,7 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Task updated! ✨"),
+          content: Text("Next Up task updated! 🛼✨"),
           backgroundColor: PockiColors.successGreen,
           behavior: SnackBarBehavior.floating,
         ),
@@ -181,7 +181,7 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Task added to your list! 🚀✨"),
+          content: Text("Next Up task added! 🛼✨"),
           backgroundColor: PockiColors.successGreen,
           behavior: SnackBarBehavior.floating,
         ),
@@ -235,7 +235,7 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
                   ),
                 ),
                 Text(
-                  _isEditing ? "Edit Todo" : "Add Todo",
+                  _isEditing ? "Edit Next Up" : "Add Next Up",
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 GestureDetector(
@@ -410,7 +410,7 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
                 ),
                 child: Center(
                   child: Text(
-                    _isEditing ? "Update Todo" : "Add Todo",
+                    _isEditing ? "Update Next Up" : "Add Next Up",
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,

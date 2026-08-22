@@ -15,16 +15,57 @@ class AuthRepositoryImpl implements AuthRepository {
   UserEntity? get currentUser => _cachedUser;
 
   @override
+  Future<UserEntity?> getInitialUser() async {
+    final firebaseUser = _firebaseDataSource.currentUser;
+    if (firebaseUser == null) {
+      _cachedUser = null;
+      await _localCacheDataSource.clearAll();
+      return null;
+    }
+
+    // Try loading cached profile first for fast startup
+    final cached = await _localCacheDataSource.getCachedUser();
+    if (cached != null && cached.uid == firebaseUser.uid) {
+      _cachedUser = cached;
+      // Refresh profile asynchronously in background
+      fetchUserProfile(firebaseUser.uid);
+      return cached;
+    }
+
+    // Fetch fresh profile from Firestore
+    final remote = await fetchUserProfile(firebaseUser.uid);
+    if (remote != null) {
+      return remote;
+    }
+
+    // Fallback default user if user document doesn't exist in Firestore
+    final fallback = UserEntity.defaultUser(firebaseUser.uid, firebaseUser.email ?? '');
+    _cachedUser = fallback;
+    await _localCacheDataSource.cacheUser(fallback);
+    return fallback;
+  }
+
+  @override
   Stream<UserEntity?> get authUserStream {
-    return _firebaseDataSource.authStateChanges.asyncMap((user) async {
-      if (user == null) {
+    return _firebaseDataSource.authStateChanges.asyncMap((firebaseUser) async {
+      if (firebaseUser == null) {
         _cachedUser = null;
         await _localCacheDataSource.clearAll();
         return null;
       }
-      final profile = await fetchUserProfile(user.uid);
-      _cachedUser = profile;
-      return profile;
+      final profile = await fetchUserProfile(firebaseUser.uid);
+      if (profile != null) {
+        _cachedUser = profile;
+        return profile;
+      }
+      final cached = await _localCacheDataSource.getCachedUser();
+      if (cached != null && cached.uid == firebaseUser.uid) {
+        _cachedUser = cached;
+        return cached;
+      }
+      final fallback = UserEntity.defaultUser(firebaseUser.uid, firebaseUser.email ?? '');
+      _cachedUser = fallback;
+      return fallback;
     });
   }
 
@@ -72,8 +113,11 @@ class AuthRepositoryImpl implements AuthRepository {
       return remote;
     }
     final cached = await _localCacheDataSource.getCachedUser();
-    if (cached != null) _cachedUser = cached;
-    return cached;
+    if (cached != null && cached.uid == uid) {
+      _cachedUser = cached;
+      return cached;
+    }
+    return null;
   }
 
   @override

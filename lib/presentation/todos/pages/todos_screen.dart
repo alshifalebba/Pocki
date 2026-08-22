@@ -74,9 +74,9 @@ class _TodosScreenState extends State<TodosScreen> {
                         children: [
                           Row(
                             children: [
-                              const Text("☑️", style: TextStyle(fontSize: 22)),
+                              const Text("🛼", style: TextStyle(fontSize: 22)),
                               const SizedBox(width: 8),
-                              Text("Todos", style: Theme.of(context).textTheme.headlineMedium),
+                              Text("Next Up", style: Theme.of(context).textTheme.headlineMedium),
                               const SizedBox(width: 4),
                               const Text("✨", style: TextStyle(fontSize: 16)),
                             ],
@@ -144,7 +144,7 @@ class _TodosScreenState extends State<TodosScreen> {
                                         children: [
                                           Text("🎉", style: TextStyle(fontSize: 48)),
                                           SizedBox(height: 12),
-                                          Text("Nothing to do here! 🎉", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                          Text("No tasks next up! 🎉", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                                         ],
                                       ),
                                     ),

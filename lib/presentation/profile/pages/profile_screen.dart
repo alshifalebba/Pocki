@@ -54,10 +54,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: () {
                 final newQuote = _quoteController.text.trim();
                 if (newQuote.isNotEmpty) {
+                  final updatedUser = user.copyWith(quote: newQuote, updatedAt: DateTime.now());
                   context.read<ProfileBloc>().add(
                         UpdateProfileQuoteEvent(currentUser: user, newQuote: newQuote),
                       );
-                  context.read<AuthBloc>().add(AuthCheckRequestedEvent());
+                  context.read<AuthBloc>().add(UpdateAuthUserEvent(updatedUser));
                 }
                 Navigator.pop(dialogContext);
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -174,6 +175,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       return;
                     }
 
+                    final updatedUser = user.copyWith(
+                      name: name,
+                      nickname: nickname.isEmpty ? 'user' : nickname,
+                      phone: phone,
+                      updatedAt: DateTime.now(),
+                    );
+
                     context.read<ProfileBloc>().add(
                           UpdateProfileInfoEvent(
                             currentUser: user,
@@ -182,7 +190,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             phone: phone,
                           ),
                         );
-                    context.read<AuthBloc>().add(AuthCheckRequestedEvent());
+                    context.read<AuthBloc>().add(UpdateAuthUserEvent(updatedUser));
                     Navigator.pop(sheetContext);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("Profile updated! 💖✨")),

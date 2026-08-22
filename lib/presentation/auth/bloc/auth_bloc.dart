@@ -31,6 +31,11 @@ class RegisterSubmittedEvent extends AuthEvent {
 
 class LogoutRequestedEvent extends AuthEvent {}
 
+class UpdateAuthUserEvent extends AuthEvent {
+  final UserEntity user;
+  UpdateAuthUserEvent(this.user);
+}
+
 // STATES
 abstract class AuthState {}
 
@@ -56,27 +61,42 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final RegisterUseCase registerUseCase;
   final LogoutUseCase logoutUseCase;
   final GetCurrentUserUseCase getCurrentUserUseCase;
+  final GetInitialUserUseCase getInitialUserUseCase;
 
   AuthBloc({
     required this.loginUseCase,
     required this.registerUseCase,
     required this.logoutUseCase,
     required this.getCurrentUserUseCase,
+    required this.getInitialUserUseCase,
   }) : super(AuthInitialState()) {
     on<AuthCheckRequestedEvent>(_onAuthCheckRequested);
     on<LoginSubmittedEvent>(_onLoginSubmitted);
     on<RegisterSubmittedEvent>(_onRegisterSubmitted);
     on<LogoutRequestedEvent>(_onLogoutRequested);
+    on<UpdateAuthUserEvent>(_onUpdateAuthUser);
+  }
+
+  void _onUpdateAuthUser(
+    UpdateAuthUserEvent event,
+    Emitter<AuthState> emit,
+  ) {
+    emit(AuthenticatedState(event.user));
   }
 
   Future<void> _onAuthCheckRequested(
     AuthCheckRequestedEvent event,
     Emitter<AuthState> emit,
   ) async {
-    final user = getCurrentUserUseCase();
-    if (user != null) {
-      emit(AuthenticatedState(user));
-    } else {
+    emit(AuthLoadingState());
+    try {
+      final user = await getInitialUserUseCase();
+      if (user != null) {
+        emit(AuthenticatedState(user));
+      } else {
+        emit(UnauthenticatedState());
+      }
+    } catch (e) {
       emit(UnauthenticatedState());
     }
   }

@@ -8,6 +8,13 @@ class GetCurrentUserUseCase {
   UserEntity? call() => _repository.currentUser;
 }
 
+class GetInitialUserUseCase {
+  final AuthRepository _repository;
+  GetInitialUserUseCase(this._repository);
+
+  Future<UserEntity?> call() => _repository.getInitialUser();
+}
+
 class LoginUseCase {
   final AuthRepository _repository;
   LoginUseCase(this._repository);

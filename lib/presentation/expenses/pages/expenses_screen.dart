@@ -10,6 +10,7 @@ import 'package:pocki/presentation/expenses/bloc/expense_bloc.dart';
 import 'package:pocki/presentation/profile/bloc/profile_bloc.dart';
 import '../widgets/add_expense_bottom_sheet.dart';
 import '../widgets/add_fixed_expense_bottom_sheet.dart';
+import 'expense_summary_screen.dart';
 
 class ExpensesScreen extends StatefulWidget {
   const ExpensesScreen({super.key});
@@ -101,10 +102,11 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 final text = controller.text.trim();
                 final parsed = double.tryParse(text);
                 if (parsed != null && parsed >= 0) {
+                  final updatedUser = user.copyWith(monthlyBudget: parsed, updatedAt: DateTime.now());
                   context.read<ProfileBloc>().add(
                         UpdateMonthlyBudgetEvent(currentUser: user, newBudget: parsed),
                       );
-                  context.read<AuthBloc>().add(AuthCheckRequestedEvent());
+                  context.read<AuthBloc>().add(UpdateAuthUserEvent(updatedUser));
                   Navigator.pop(dialogContext);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Monthly budget updated! 💰✨")),
@@ -209,15 +211,16 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 }
 
                 final now = DateTime.now();
-                final monthlyExpenses = expenses.where(
+                // Regular expenses for CURRENT month only
+                final currentMonthExpenses = expenses.where(
                   (e) => e.dateTime.year == now.year && e.dateTime.month == now.month,
                 );
-                final totalRegularSpent = monthlyExpenses.fold(0.0, (sum, e) => sum + e.amount);
+                final totalRegularSpent = currentMonthExpenses.fold(0.0, (sum, e) => sum + e.amount);
                 final totalFixedSpent = fixedExpenses.fold(0.0, (sum, f) => sum + f.amount);
                 final totalCombinedSpent = totalRegularSpent + totalFixedSpent;
                 final remaining = user.monthlyBudget - totalCombinedSpent;
 
-                // Filtering regular expenses
+                // Filtering regular expenses for current month or date filter
                 List<ExpenseEntity> filteredExpenses = expenses;
 
                 if (_selectedDateFilter != null) {
@@ -225,6 +228,11 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                     return e.dateTime.year == _selectedDateFilter!.year &&
                         e.dateTime.month == _selectedDateFilter!.month &&
                         e.dateTime.day == _selectedDateFilter!.day;
+                  }).toList();
+                } else {
+                  // Default to current month when no specific date filter is selected
+                  filteredExpenses = filteredExpenses.where((e) {
+                    return e.dateTime.year == now.year && e.dateTime.month == now.month;
                   }).toList();
                 }
 
@@ -234,9 +242,21 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       .toList();
                 }
 
+                // Previous Months Computation
+                final currentMonthKey = DateTime(now.year, now.month);
+                final Map<DateTime, List<ExpenseEntity>> previousMonthsMap = {};
+                for (final e in expenses) {
+                  final mKey = DateTime(e.dateTime.year, e.dateTime.month);
+                  if (mKey.isBefore(currentMonthKey)) {
+                    previousMonthsMap.putIfAbsent(mKey, () => []).add(e);
+                  }
+                }
+                final previousMonthKeys = previousMonthsMap.keys.toList()
+                  ..sort((a, b) => b.compareTo(a));
+
                 return Column(
                   children: [
-                    // Top Bar
+                    // Top Bar with Summary & Calendar Buttons
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       child: Row(
@@ -249,23 +269,64 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                               Text("Expenses", style: Theme.of(context).textTheme.headlineMedium),
                             ],
                           ),
-                          GestureDetector(
-                            onTap: _pickDateFilter,
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: _selectedDateFilter != null ? PockiColors.pinkTint : Colors.white,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: _selectedDateFilter != null ? PockiColors.primaryPink : Colors.transparent,
+                          Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const ExpenseSummaryScreen(),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(14),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.03),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.analytics_outlined,
+                                    size: 20,
+                                    color: PockiColors.secondaryPurple,
+                                  ),
                                 ),
                               ),
-                              child: Icon(
-                                Icons.calendar_month_outlined,
-                                size: 20,
-                                color: _selectedDateFilter != null ? PockiColors.primaryPink : PockiColors.textDark,
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: _pickDateFilter,
+                                child: Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: _selectedDateFilter != null ? PockiColors.pinkTint : Colors.white,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: _selectedDateFilter != null ? PockiColors.primaryPink : Colors.transparent,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.03),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    Icons.calendar_month_outlined,
+                                    size: 20,
+                                    color: _selectedDateFilter != null ? PockiColors.primaryPink : PockiColors.textDark,
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
                         ],
                       ),
@@ -430,17 +491,41 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             ),
                             const SizedBox(height: 24),
 
-                            // FIXED EXPENSES SECTION
+                            // FIXED EXPENSES SECTION WITH DECORATIVE ILLUSTATION & BADGE
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Row(
+                                Row(
                                   children: [
-                                    Text("📌", style: TextStyle(fontSize: 18)),
-                                    SizedBox(width: 6),
-                                    Text(
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: PockiColors.purpleTint,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Image.asset(
+                                        'assets/illustrations/mascot.png',
+                                        height: 22,
+                                        width: 22,
+                                        errorBuilder: (ctx, err, stack) => const Text("🐷", style: TextStyle(fontSize: 18)),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Text(
                                       "Fixed Expenses",
                                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: PockiColors.textDark),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: PockiColors.pinkTint,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Text(
+                                        "Monthly 💳",
+                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: PockiColors.primaryPink),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -569,9 +654,31 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
-                                  "Expense List",
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: PockiColors.textDark),
+                                Row(
+                                  children: [
+                                    const Text(
+                                      "Expense List",
+                                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: PockiColors.textDark),
+                                    ),
+                                    if (_selectedCategoryFilter != 'All' || _selectedDateFilter != null) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: PockiColors.pinkTint,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          currencyFormat.format(filteredExpenses.fold(0.0, (sum, e) => sum + e.amount)),
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: PockiColors.primaryPink,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                                 GestureDetector(
                                   onTap: _openAddExpense,
@@ -592,7 +699,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
                               child: Row(
-                                children: ['All', 'Food', 'Transport', 'Shopping', 'Other'].map((cat) {
+                                children: ['All', 'Food', 'Transport', 'Petrol', 'Groceries', 'Dress', 'Other'].map((cat) {
                                   final isSelected = _selectedCategoryFilter == cat;
                                   return GestureDetector(
                                     onTap: () => setState(() => _selectedCategoryFilter = cat),
@@ -712,7 +819,102 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                   );
                                 },
                               ),
-                            const SizedBox(height: 20),
+
+                            // PREVIOUS MONTHS SECTION
+                            if (previousMonthKeys.isNotEmpty) ...[
+                              const SizedBox(height: 28),
+                              const Row(
+                                children: [
+                                  Text("📦", style: TextStyle(fontSize: 18)),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    "Previous Months",
+                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: PockiColors.textDark),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              ListView.separated(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: previousMonthKeys.length,
+                                separatorBuilder: (context, index) => const SizedBox(height: 10),
+                                itemBuilder: (context, index) {
+                                  final mKey = previousMonthKeys[index];
+                                  final mExpenses = previousMonthsMap[mKey]!;
+                                  final totalSpent = mExpenses.fold(0.0, (sum, e) => sum + e.amount);
+                                  final catCount = mExpenses.map((e) => e.category).toSet().length;
+
+                                  return GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => ExpenseSummaryScreen(initialMonth: mKey),
+                                        ),
+                                      );
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(20),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.02),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.all(10),
+                                                decoration: BoxDecoration(
+                                                  color: PockiColors.pinkTint,
+                                                  borderRadius: BorderRadius.circular(14),
+                                                ),
+                                                child: const Text("📦", style: TextStyle(fontSize: 20)),
+                                              ),
+                                              const SizedBox(width: 14),
+                                              Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    DateFormat('MMMM yyyy').format(mKey),
+                                                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: PockiColors.textDark),
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    "$catCount categor${catCount > 1 ? 'ies' : 'y'} • ${currencyFormat.format(totalSpent)}",
+                                                    style: const TextStyle(fontSize: 11, color: PockiColors.textMuted),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                          const Row(
+                                            children: [
+                                              Text(
+                                                "Summary",
+                                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: PockiColors.primaryPink),
+                                              ),
+                                              SizedBox(width: 4),
+                                              Icon(Icons.arrow_forward_ios_rounded, size: 14, color: PockiColors.primaryPink),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                            const SizedBox(height: 24),
                           ],
                         ),
                       ),
