@@ -1,5 +1,6 @@
 import '../../domain/entities/expense_entity.dart';
 import '../../domain/entities/fixed_expense_entity.dart';
+import '../../domain/entities/additional_amount_entity.dart';
 import '../../domain/repositories/expense_repository.dart';
 import '../datasources/firebase/firebase_data_source.dart';
 import '../datasources/local/local_cache_data_source.dart';
@@ -61,4 +62,27 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
   Future<void> deleteFixedExpense(String userId, String fixedExpenseId) async {
     await _firebaseDataSource.deleteFixedExpense(userId, fixedExpenseId);
   }
+
+  // ADDITIONAL AMOUNTS
+  @override
+  Stream<List<AdditionalAmountEntity>> getAdditionalAmountsStream(
+      String userId, int month, int year) {
+    return _firebaseDataSource.streamAdditionalAmounts(userId, month, year);
+  }
+
+  @override
+  Future<void> addAdditionalAmount(AdditionalAmountEntity amount) async {
+    await _firebaseDataSource.addAdditionalAmount(amount);
+  }
+
+  @override
+  Future<void> updateAdditionalAmount(AdditionalAmountEntity amount) async {
+    await _firebaseDataSource.updateAdditionalAmount(amount);
+  }
+
+  @override
+  Future<void> deleteAdditionalAmount(String userId, String additionalAmountId) async {
+    await _firebaseDataSource.deleteAdditionalAmount(userId, additionalAmountId);
+  }
 }
+

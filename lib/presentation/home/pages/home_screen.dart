@@ -5,6 +5,7 @@ import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:pocki/core/theme/pocki_colors.dart';
 import 'package:pocki/domain/entities/expense_entity.dart';
 import 'package:pocki/domain/entities/fixed_expense_entity.dart';
+import 'package:pocki/domain/entities/additional_amount_entity.dart';
 import 'package:pocki/presentation/auth/bloc/auth_bloc.dart';
 import 'package:pocki/presentation/expenses/bloc/expense_bloc.dart';
 
@@ -44,9 +45,11 @@ class _HomeScreenState extends State<HomeScreen> {
               builder: (context, expenseState) {
                 List<ExpenseEntity> expenses = [];
                 List<FixedExpenseEntity> fixedExpenses = [];
+                List<AdditionalAmountEntity> additionalAmounts = [];
                 if (expenseState is ExpenseLoadedState) {
                   expenses = expenseState.expenses;
                   fixedExpenses = expenseState.fixedExpenses;
+                  additionalAmounts = expenseState.additionalAmounts;
                 }
 
                 // Dynamic Calculations
@@ -57,7 +60,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 final totalRegularSpent = monthlyExpenses.fold(0.0, (sum, e) => sum + e.amount);
                 final totalFixedSpent = fixedExpenses.fold(0.0, (sum, f) => sum + f.amount);
                 final totalSpent = totalRegularSpent + totalFixedSpent;
-                final totalBudget = user.monthlyBudget;
+                final totalAdditional = additionalAmounts.fold(0.0, (sum, a) => sum + a.amount);
+                final totalBudget = user.monthlyBudget + totalAdditional;
                 final remaining = totalBudget - totalSpent;
 
                 final lastDay = DateTime(now.year, now.month + 1, 0).day;

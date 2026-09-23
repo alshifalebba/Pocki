@@ -4,12 +4,14 @@ import 'package:intl/intl.dart';
 import 'package:pocki/core/theme/pocki_colors.dart';
 import 'package:pocki/domain/entities/expense_entity.dart';
 import 'package:pocki/domain/entities/fixed_expense_entity.dart';
+import 'package:pocki/domain/entities/additional_amount_entity.dart';
 import 'package:pocki/domain/entities/user_entity.dart';
 import 'package:pocki/presentation/auth/bloc/auth_bloc.dart';
 import 'package:pocki/presentation/expenses/bloc/expense_bloc.dart';
 import 'package:pocki/presentation/profile/bloc/profile_bloc.dart';
 import '../widgets/add_expense_bottom_sheet.dart';
 import '../widgets/add_fixed_expense_bottom_sheet.dart';
+import '../widgets/add_additional_amount_bottom_sheet.dart';
 import 'expense_summary_screen.dart';
 
 class ExpensesScreen extends StatefulWidget {
@@ -185,6 +187,56 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     );
   }
 
+  void _openAddAdditionalAmount({AdditionalAmountEntity? itemToEdit}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AddAdditionalAmountBottomSheet(itemToEdit: itemToEdit),
+    );
+  }
+
+  void _confirmDeleteAdditionalAmount(String userId, AdditionalAmountEntity item) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Text("Delete additional amount?"),
+          content: Text(
+            "Are you sure you want to remove ₹${item.amount.toStringAsFixed(0)}${item.note != null && item.note!.isNotEmpty ? ' (${item.note})' : ''}?",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text("Cancel", style: TextStyle(color: PockiColors.textMuted)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: PockiColors.errorRed,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              ),
+              onPressed: () {
+                context.read<ExpenseBloc>().add(
+                      DeleteAdditionalAmountSubmittedEvent(
+                        userId: userId,
+                        additionalAmountId: item.id,
+                      ),
+                    );
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Additional amount deleted 🗑️")),
+                );
+              },
+              child: const Text("Delete"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.currency(symbol: '₹', decimalDigits: 0);
@@ -200,14 +252,27 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
             final user = authState.user;
 
-            return BlocBuilder<ExpenseBloc, ExpenseState>(
+            return BlocConsumer<ExpenseBloc, ExpenseState>(
+              listener: (context, expenseState) {
+                if (expenseState is ExpenseFailureState) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Something went wrong: ${expenseState.errorMessage}"),
+                      backgroundColor: PockiColors.errorRed,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
               builder: (context, expenseState) {
                 List<ExpenseEntity> expenses = [];
                 List<FixedExpenseEntity> fixedExpenses = [];
+                List<AdditionalAmountEntity> additionalAmounts = [];
 
                 if (expenseState is ExpenseLoadedState) {
                   expenses = expenseState.expenses;
                   fixedExpenses = expenseState.fixedExpenses;
+                  additionalAmounts = expenseState.additionalAmounts;
                 }
 
                 final now = DateTime.now();
@@ -218,7 +283,11 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 final totalRegularSpent = currentMonthExpenses.fold(0.0, (sum, e) => sum + e.amount);
                 final totalFixedSpent = fixedExpenses.fold(0.0, (sum, f) => sum + f.amount);
                 final totalCombinedSpent = totalRegularSpent + totalFixedSpent;
-                final remaining = user.monthlyBudget - totalCombinedSpent;
+
+                // Additional amounts for current month
+                final totalAdditional = additionalAmounts.fold(0.0, (sum, a) => sum + a.amount);
+                final effectiveBudget = user.monthlyBudget + totalAdditional;
+                final remaining = effectiveBudget - totalCombinedSpent;
 
                 // Filtering regular expenses for current month or date filter
                 List<ExpenseEntity> filteredExpenses = expenses;
@@ -422,31 +491,72 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                         "Monthly Budget",
                                         style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
                                       ),
-                                      GestureDetector(
-                                        onTap: () => _editBudgetDialog(user),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withValues(alpha: 0.25),
-                                            borderRadius: BorderRadius.circular(20),
+                                      Row(
+                                        children: [
+                                          GestureDetector(
+                                            onTap: () => _openAddAdditionalAmount(),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withValues(alpha: 0.25),
+                                                borderRadius: BorderRadius.circular(20),
+                                              ),
+                                              child: const Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.add_rounded, color: Colors.white, size: 14),
+                                                  SizedBox(width: 4),
+                                                  Text(
+                                                    "Additional Amount",
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 11,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
                                           ),
-                                          child: const Text(
-                                            "Edit",
-                                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                          const SizedBox(width: 8),
+                                          GestureDetector(
+                                            onTap: () => _editBudgetDialog(user),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withValues(alpha: 0.25),
+                                                borderRadius: BorderRadius.circular(20),
+                                              ),
+                                              child: const Text(
+                                                "Edit",
+                                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                              ),
+                                            ),
                                           ),
-                                        ),
+                                        ],
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    currencyFormat.format(user.monthlyBudget),
+                                    currencyFormat.format(effectiveBudget),
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 28,
                                       fontWeight: FontWeight.w900,
                                     ),
                                   ),
+                                  if (totalAdditional > 0) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      "Includes ${currencyFormat.format(totalAdditional)} additional amount",
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                   const SizedBox(height: 20),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -489,6 +599,155 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                 ],
                               ),
                             ),
+                            if (additionalAmounts.isNotEmpty) ...[
+                              const SizedBox(height: 14),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(22),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.03),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Text("💰", style: TextStyle(fontSize: 16)),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              "Additional Amounts (${currencyFormat.format(totalAdditional)})",
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.bold,
+                                                color: PockiColors.textDark,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        GestureDetector(
+                                          onTap: () => _openAddAdditionalAmount(),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: PockiColors.purpleTint,
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: const Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.add_rounded, size: 14, color: PockiColors.secondaryPurple),
+                                                SizedBox(width: 2),
+                                                Text(
+                                                  "Add",
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: PockiColors.secondaryPurple,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    ...additionalAmounts.map((item) {
+                                      return Padding(
+                                        padding: const EdgeInsets.only(bottom: 8.0),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Expanded(
+                                              child: Row(
+                                                children: [
+                                                  Container(
+                                                    padding: const EdgeInsets.all(6),
+                                                    decoration: const BoxDecoration(
+                                                      color: PockiColors.purpleTint,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons.arrow_upward_rounded,
+                                                      size: 14,
+                                                      color: PockiColors.secondaryPurple,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 10),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Text(
+                                                          item.note != null && item.note!.isNotEmpty
+                                                              ? item.note!
+                                                              : "Extra Budget",
+                                                          style: const TextStyle(
+                                                            fontSize: 13,
+                                                            fontWeight: FontWeight.w600,
+                                                            color: PockiColors.textDark,
+                                                          ),
+                                                          overflow: TextOverflow.ellipsis,
+                                                        ),
+                                                        Text(
+                                                          DateFormat('d MMM').format(item.createdAt),
+                                                          style: const TextStyle(
+                                                            fontSize: 11,
+                                                            color: PockiColors.textMuted,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  "+${currencyFormat.format(item.amount)}",
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: PockiColors.successGreen,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                GestureDetector(
+                                                  onTap: () => _openAddAdditionalAmount(itemToEdit: item),
+                                                  child: const Padding(
+                                                    padding: EdgeInsets.all(4.0),
+                                                    child: Icon(Icons.edit_outlined, size: 16, color: PockiColors.textMuted),
+                                                  ),
+                                                ),
+                                                GestureDetector(
+                                                  onTap: () => _confirmDeleteAdditionalAmount(user.uid, item),
+                                                  child: const Padding(
+                                                    padding: EdgeInsets.all(4.0),
+                                                    child: Icon(Icons.delete_outline, size: 16, color: PockiColors.errorRed),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }),
+                                  ],
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 24),
 
                             // FIXED EXPENSES SECTION WITH DECORATIVE ILLUSTATION & BADGE

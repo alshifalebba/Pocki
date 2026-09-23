@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pocki/core/errors/app_exceptions.dart';
+import 'package:pocki/domain/entities/additional_amount_entity.dart';
 import 'package:pocki/domain/entities/expense_entity.dart';
 import 'package:pocki/domain/entities/fixed_expense_entity.dart';
 import 'package:pocki/domain/entities/todo_entity.dart';
@@ -163,6 +164,51 @@ class FirebaseDataSource {
         .snapshots()
         .map((snapshot) =>
             snapshot.docs.map((doc) => FixedExpenseEntity.fromDocument(doc.data())).toList());
+  }
+
+  // ADDITIONAL AMOUNTS FIRESTORE API
+  Future<void> addAdditionalAmount(AdditionalAmountEntity amount) async {
+    await _firestore
+        .collection('users')
+        .doc(amount.userId)
+        .collection('additionalAmounts')
+        .doc(amount.id)
+        .set(amount.toDocument());
+  }
+
+  Future<void> updateAdditionalAmount(AdditionalAmountEntity amount) async {
+    await _firestore
+        .collection('users')
+        .doc(amount.userId)
+        .collection('additionalAmounts')
+        .doc(amount.id)
+        .set(amount.toDocument(), SetOptions(merge: true));
+  }
+
+  Future<void> deleteAdditionalAmount(String userId, String additionalAmountId) async {
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('additionalAmounts')
+        .doc(additionalAmountId)
+        .delete();
+  }
+
+  Stream<List<AdditionalAmountEntity>> streamAdditionalAmounts(
+      String userId, int month, int year) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('additionalAmounts')
+        .snapshots()
+        .map((snapshot) {
+          final items = snapshot.docs
+              .map((doc) => AdditionalAmountEntity.fromDocument(doc.data()))
+              .where((item) => item.month == month && item.year == year)
+              .toList();
+          items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return items;
+        });
   }
 
   // TODOS FIRESTORE API

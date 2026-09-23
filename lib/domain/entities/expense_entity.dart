@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum ExpenseCategory {
   food,
+  transport,
   petrol,
   dress,
   groceries,
@@ -11,6 +12,8 @@ enum ExpenseCategory {
     switch (this) {
       case ExpenseCategory.food:
         return 'Food';
+      case ExpenseCategory.transport:
+        return 'Transport';
       case ExpenseCategory.petrol:
         return 'Petrol';
       case ExpenseCategory.dress:
@@ -26,6 +29,8 @@ enum ExpenseCategory {
     switch (this) {
       case ExpenseCategory.food:
         return '🍔';
+      case ExpenseCategory.transport:
+        return '🚌';
       case ExpenseCategory.petrol:
         return '⛽';
       case ExpenseCategory.dress:

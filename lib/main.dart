@@ -8,6 +8,7 @@ import 'data/datasources/local/local_cache_data_source.dart';
 import 'data/repositories/auth_repository_impl.dart';
 import 'data/repositories/expense_repository_impl.dart';
 import 'data/repositories/todo_repository_impl.dart';
+import 'domain/usecases/additional_amount_usecases.dart';
 import 'domain/usecases/auth_usecases.dart';
 import 'domain/usecases/expense_usecases.dart';
 import 'domain/usecases/todo_usecases.dart';
@@ -58,6 +59,11 @@ void main() async {
   final updateFixedExpenseUseCase = UpdateFixedExpenseUseCase(expenseRepository);
   final deleteFixedExpenseUseCase = DeleteFixedExpenseUseCase(expenseRepository);
 
+  final getAdditionalAmountsStreamUseCase = GetAdditionalAmountsStreamUseCase(expenseRepository);
+  final addAdditionalAmountUseCase = AddAdditionalAmountUseCase(expenseRepository);
+  final updateAdditionalAmountUseCase = UpdateAdditionalAmountUseCase(expenseRepository);
+  final deleteAdditionalAmountUseCase = DeleteAdditionalAmountUseCase(expenseRepository);
+
   final getTodosStreamUseCase = GetTodosStreamUseCase(todoRepository);
   final addTodoUseCase = AddTodoUseCase(todoRepository);
   final updateTodoUseCase = UpdateTodoUseCase(todoRepository);
@@ -84,6 +90,10 @@ void main() async {
             addFixedExpenseUseCase: addFixedExpenseUseCase,
             updateFixedExpenseUseCase: updateFixedExpenseUseCase,
             deleteFixedExpenseUseCase: deleteFixedExpenseUseCase,
+            getAdditionalAmountsStreamUseCase: getAdditionalAmountsStreamUseCase,
+            addAdditionalAmountUseCase: addAdditionalAmountUseCase,
+            updateAdditionalAmountUseCase: updateAdditionalAmountUseCase,
+            deleteAdditionalAmountUseCase: deleteAdditionalAmountUseCase,
           ),
         ),
         BlocProvider<TodoBloc>(
