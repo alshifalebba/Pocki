@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../domain/entities/todo_entity.dart';
 import '../../../../domain/usecases/todo_usecases.dart';
@@ -10,6 +11,8 @@ class LoadTodosEvent extends TodoEvent {
   final String userId;
   LoadTodosEvent(this.userId);
 }
+
+class ClearTodosEvent extends TodoEvent {}
 
 class TodosUpdatedEvent extends TodoEvent {
   final List<TodoEntity> todos;
@@ -69,6 +72,7 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
     required this.deleteTodoUseCase,
   }) : super(TodoInitialState()) {
     on<LoadTodosEvent>(_onLoadTodos);
+    on<ClearTodosEvent>(_onClearTodos);
     on<TodosUpdatedEvent>(_onTodosUpdated);
     on<AddTodoSubmittedEvent>(_onAddTodoSubmitted);
     on<UpdateTodoSubmittedEvent>(_onUpdateTodoSubmitted);
@@ -76,12 +80,23 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
     on<DeleteTodoSubmittedEvent>(_onDeleteTodoSubmitted);
   }
 
+  void _onClearTodos(ClearTodosEvent event, Emitter<TodoState> emit) {
+    _todosSubscription?.cancel();
+    _todosSubscription = null;
+    emit(TodoInitialState());
+  }
+
   void _onLoadTodos(LoadTodosEvent event, Emitter<TodoState> emit) {
     emit(TodoLoadingState());
     _todosSubscription?.cancel();
     _todosSubscription = getTodosStreamUseCase(event.userId).listen(
       (todos) => add(TodosUpdatedEvent(todos)),
-      onError: (error) => emit(TodoFailureState(error.toString())),
+      onError: (error) {
+        if (kDebugMode) {
+          debugPrint("Firestore todos stream error: $error (user: ${event.userId})");
+        }
+        emit(TodoFailureState("Unable to load Next Up tasks. Please try again."));
+      },
     );
   }
 

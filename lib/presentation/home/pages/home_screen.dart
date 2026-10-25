@@ -43,6 +43,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
             return BlocBuilder<ExpenseBloc, ExpenseState>(
               builder: (context, expenseState) {
+                if (expenseState is ExpenseInitialState) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    context.read<ExpenseBloc>().add(LoadExpensesEvent(user.uid));
+                  });
+                }
+
                 List<ExpenseEntity> expenses = [];
                 List<FixedExpenseEntity> fixedExpenses = [];
                 List<AdditionalAmountEntity> additionalAmounts = [];
@@ -396,7 +402,26 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      if (expenses.isEmpty)
+                      if (expenseState is ExpenseFailureState)
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Column(
+                            children: [
+                              const Text("⚠️", style: TextStyle(fontSize: 32)),
+                              const SizedBox(height: 8),
+                              Text(
+                                expenseState.errorMessage,
+                                style: const TextStyle(fontWeight: FontWeight.bold, color: PockiColors.textDark),
+                              ),
+                            ],
+                          ),
+                        )
+                      else if (expenses.isEmpty)
                         Container(
                           padding: const EdgeInsets.all(24),
                           width: double.infinity,

@@ -48,8 +48,16 @@ class _TodosScreenState extends State<TodosScreen> {
               return const Center(child: CircularProgressIndicator());
             }
 
+            final user = authState.user;
+
             return BlocBuilder<TodoBloc, TodoState>(
               builder: (context, todoState) {
+                if (todoState is TodoInitialState) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    context.read<TodoBloc>().add(LoadTodosEvent(user.uid));
+                  });
+                }
+
                 List<TodoEntity> todos = [];
                 if (todoState is TodoLoadedState) {
                   todos = todoState.todos;

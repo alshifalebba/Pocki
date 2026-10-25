@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../domain/entities/additional_amount_entity.dart';
 import '../../../../domain/entities/expense_entity.dart';
@@ -66,6 +67,8 @@ class UpdateAdditionalAmountSubmittedEvent extends ExpenseEvent {
   final AdditionalAmountEntity additionalAmount;
   UpdateAdditionalAmountSubmittedEvent(this.additionalAmount);
 }
+
+class ClearExpensesEvent extends ExpenseEvent {}
 
 class DeleteAdditionalAmountSubmittedEvent extends ExpenseEvent {
   final String userId;
@@ -148,6 +151,7 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
     required this.deleteAdditionalAmountUseCase,
   }) : super(ExpenseInitialState()) {
     on<LoadExpensesEvent>(_onLoadExpenses);
+    on<ClearExpensesEvent>(_onClearExpenses);
     on<ExpensesUpdatedEvent>(_onExpensesUpdated);
     on<FixedExpensesUpdatedEvent>(_onFixedExpensesUpdated);
     on<AdditionalAmountsUpdatedEvent>(_onAdditionalAmountsUpdated);
@@ -161,6 +165,19 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
     on<DeleteAdditionalAmountSubmittedEvent>(_onDeleteAdditionalAmountSubmitted);
   }
 
+  void _onClearExpenses(ClearExpensesEvent event, Emitter<ExpenseState> emit) {
+    _expensesSubscription?.cancel();
+    _fixedExpensesSubscription?.cancel();
+    _additionalAmountsSubscription?.cancel();
+    _expensesSubscription = null;
+    _fixedExpensesSubscription = null;
+    _additionalAmountsSubscription = null;
+    _latestExpenses = [];
+    _latestFixedExpenses = [];
+    _latestAdditionalAmounts = [];
+    emit(ExpenseInitialState());
+  }
+
   void _onLoadExpenses(LoadExpensesEvent event, Emitter<ExpenseState> emit) {
     emit(ExpenseLoadingState());
     _expensesSubscription?.cancel();
@@ -169,12 +186,22 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
 
     _expensesSubscription = getExpensesStreamUseCase(event.userId).listen(
       (expenses) => add(ExpensesUpdatedEvent(expenses)),
-      onError: (error) => emit(ExpenseFailureState(error.toString())),
+      onError: (error) {
+        if (kDebugMode) {
+          debugPrint("Firestore expenses stream error: $error (user: ${event.userId})");
+        }
+        emit(ExpenseFailureState("Unable to load expenses. Please try again."));
+      },
     );
 
     _fixedExpensesSubscription = getFixedExpensesStreamUseCase(event.userId).listen(
       (fixedExpenses) => add(FixedExpensesUpdatedEvent(fixedExpenses)),
-      onError: (error) => emit(ExpenseFailureState(error.toString())),
+      onError: (error) {
+        if (kDebugMode) {
+          debugPrint("Firestore fixedExpenses stream error: $error (user: ${event.userId})");
+        }
+        emit(ExpenseFailureState("Unable to load expenses. Please try again."));
+      },
     );
 
     final now = DateTime.now();
@@ -184,7 +211,12 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
       now.year,
     ).listen(
       (amounts) => add(AdditionalAmountsUpdatedEvent(amounts)),
-      onError: (error) => emit(ExpenseFailureState(error.toString())),
+      onError: (error) {
+        if (kDebugMode) {
+          debugPrint("Firestore additionalAmounts stream error: $error (user: ${event.userId})");
+        }
+        emit(ExpenseFailureState("Unable to load expenses. Please try again."));
+      },
     );
   }
 

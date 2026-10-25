@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pocki/core/theme/pocki_colors.dart';
 import 'package:pocki/presentation/auth/bloc/auth_bloc.dart';
+import 'package:pocki/presentation/expenses/bloc/expense_bloc.dart';
 import 'package:pocki/presentation/profile/bloc/profile_bloc.dart';
+import 'package:pocki/presentation/todos/bloc/todo_bloc.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -172,6 +174,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 GestureDetector(
                   onTap: () {
+                    context.read<ExpenseBloc>().add(ClearExpensesEvent());
+                    context.read<TodoBloc>().add(ClearTodosEvent());
                     context.read<AuthBloc>().add(LogoutRequestedEvent());
                     Navigator.of(context).pushNamedAndRemoveUntil('/welcome', (route) => false);
                   },

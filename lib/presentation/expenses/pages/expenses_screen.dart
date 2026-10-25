@@ -257,7 +257,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 if (expenseState is ExpenseFailureState) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text("Something went wrong: ${expenseState.errorMessage}"),
+                      content: Text(expenseState.errorMessage),
                       backgroundColor: PockiColors.errorRed,
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -265,6 +265,12 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 }
               },
               builder: (context, expenseState) {
+                if (expenseState is ExpenseInitialState) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    context.read<ExpenseBloc>().add(LoadExpensesEvent(user.uid));
+                  });
+                }
+
                 List<ExpenseEntity> expenses = [];
                 List<FixedExpenseEntity> fixedExpenses = [];
                 List<AdditionalAmountEntity> additionalAmounts = [];
